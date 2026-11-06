@@ -1,0 +1,305 @@
+##Functional Description:
+##A simple game where the player places a bet (a number 1-6) and 3 dices are 
+##rolled. Te bet is multiplied by how many wins they get and they get that
+##much back. If they get 0 wins, they lose their bet. Game ends when the
+#player runs out of money
+###############################################################################
+##Register usage:
+#We will use registers R8-R15 AKA t0-t7 for our function
+#t0 is for function temporary use
+#t1 is for our wager
+#t2 is for our bet
+#t3 is for counting wins
+#t4 is for function temporary use
+#t5 is for function temporary use
+#t6 is for counting the loop
+###############################################################################
+##Pseudocode:
+#Welcome user
+#Get wager and bet
+#store in their registers
+#if bet>current holdings, get new bet
+#get dice rolls, print them as they are returned get them and repeat 3 times
+#Count winning rolls
+#if winning rolls=0 then jump to losebet functiom
+#multiply wins by bet, add to total and save back in currentHoldings
+#clean up temporary registers
+#rerun until wager=0 or until currentHoldings=0
+###############################################################################
+
+.data
+#all our stored data for use throughout the game.
+welcome: .asciiz"\nWelcome to ChuckaLuck!"
+welcome2: .asciiz"\nPlease input wager: "
+welcome3: .asciiz"\nYou can't bet more than you own! Try again or bet 0 to exit.\n"
+askForBet: .asciiz"Please bet a number 1 through 6: "
+
+currentRoll: .asciiz"\nRolled: "
+
+bye: .asciiz"\nThank you for playing! Goodbye."
+
+postGameText1: .asciiz"\nYou lost your bet!"
+postGameText2: .asciiz"\nYour winnings are: $"
+postGameText3: .asciiz"\nYou currently have: $"
+
+currentHoldings: .word 500
+seed: .word 701438590
+
+#We will use registers R8-R15 AKA t0-t7 for our function
+#t0 is for function temporary use
+#t1 is for our wager
+#t2 is for our bet
+#t3 is for counting wins
+#t4 is for function temporary use
+#t5 is for function temporary use
+#t6 is for counting the loop
+
+
+#program starts here
+.text
+li $v0,4		#Here we simply welcome the user to our program and kick off the primary routine
+la $a0,welcome
+syscall
+
+
+###############################################################################
+##Function Name: mainRoutine
+###############################################################################
+##Functional Description:
+##Asks the user for their wager, it asks for their bet then saves them both in
+##the designated registers above. Once this is done the function kicks off
+##DiceRolling, the function to get our random values
+###############################################################################
+##Register usage:
+##t4, for checking against our currentHoldingst
+##t1 is for our wager
+##t2 is the bet
+###############################################################################
+##Pseudocode:
+##get wager from user, store in t1
+##get bet from user, store in t2
+##if bet>currentHoldings
+##  go to beginning
+##load loopCounterDefault to t4
+##jump to DiceRolling
+##	
+###############################################################################
+
+mainRoutine:
+li $v0,4
+la $a0,welcome2
+syscall
+li $v0,5
+syscall						#Get wager from user
+blez $v0,exitStrategy		#Checks if wager is 0, goes to exitStrategy subroutine if so.
+lw $t4, currentHoldings
+bgt $v0,$t4,impossibleBet	#Checks if wager is more than player owns, if so then go to impossibleBet
+move $t1,$v0				#copy the wager into t1
+li $v0, 4					#ask the player for their bet
+la $a0,askForBet
+syscall
+li $v0,5
+syscall
+move $t2,$v0
+addi $t4, $0, 3				#set the loop counter to 3
+j DiceRolling
+impossibleBet:
+li $v0,4
+la $a0,welcome3
+syscall
+j mainRoutine
+
+###############################################################################
+##Function Name: DiceRolling
+###############################################################################
+##Functional Description:
+#The routine for rolling our dice, loops 3 times getting our roll and printing
+#it out each time, if a roll is the same as the user's bet another counter goes
+#up to +1.
+###############################################################################
+##Register usage:
+#t6 is our loop counter
+#t5 is our random value between 1 and 6 from rand.
+#t2 holds our bet and t3 is for counting wins.
+###############################################################################
+##Pseudocode:
+#if t6 is 3, go to post game
+#get random value from rand function, store in t5
+#print the roll to the player
+#if roll(t5)=bet(t2) add 1 to t3
+#jump to beginning
+###############################################################################
+DiceRolling:
+beq $t6, $t4, postGame
+jal rand
+addi $t6,$t6,1				#Tick our loop counter +1
+move $t5,$v0     			#move rand output to temp register
+li $v0,4         			#print the roll to the player here till 2nd syscall
+la $a0, currentRoll
+syscall
+li $v0,1
+move $a0,$t5
+syscall
+beq $t5, $t2, win 			#if equal to our bet, jump to adding a point to our counter, else we simply loop back
+j DiceRolling
+win:						#tiny weeny subsubroutine to simply add 1 to our win counter
+addi $t3, $t3, 1
+j DiceRolling
+
+
+
+###############################################################################
+##Function Name: postGame
+###############################################################################
+##Functional Description:
+#Counts up our winnings by looking at how many wins we got, if it's 0 then we
+#simply subtract from the whole and store it. Else follows the typical rules for
+#ChuckaLuck in that it multiplies our winnings by our bet and adds it to our
+#currentHoldings
+###############################################################################
+##Register usage:
+#t3 for wins
+#t1 is for our bet
+#t5 is the total winnings we get
+#t4 is for our currentHoldings, our total money we have
+###############################################################################
+##Pseudocode:
+#if winnings=0 then go to loseBet
+#multiply bet(t1) by wins(t3)
+#add to t4, put in t4
+#store in currentHoldings
+#print total winnings
+#jump to cleanUp
+###############################################################################
+postGame:
+beq $t3,$0,loseBet				#if wins = 0 then go to loseBet
+mul $t5,$t1,$t3					#multiply wins*bet and put in t5
+lw $t4, currentHoldings			#load currentHoldings into t4
+add $t4,$t4,$t5					#add our winnings to our currentHoldings
+sw $t4, currentHoldings			#store our new total in currentHoldings
+li $v0,4						#print the postGame text
+la $a0,postGameText2
+syscall
+li $v0,1
+move $a0,$t5
+syscall
+li $v0,4
+la $a0,postGameText3
+syscall
+li $v0,1
+move $a0,$t4
+syscall
+j cleanUp						#jump to cleanUp so we can reset registers
+
+###############################################################################
+##Function Name: loseBet
+###############################################################################
+##Functional Description:
+#If we did not win any of the rolls then we subtract our bet from our current
+#holdings and store in currentHoldings
+###############################################################################
+##Register usage:
+#t5 is for currentHoldings
+#t1 is our bet
+###############################################################################
+##Pseudocode:
+#load currentHoldings into t5
+#subtract currentHoldings(t5) from bet(t1)
+#if currentHoldings(t5) = 0 then jump to exitStrategy
+#store t5 in currentHoldings
+#print the 'you lost' message
+#jump to cleanUp to reset our temp registers
+###############################################################################
+loseBet:
+lw $t5,currentHoldings				#load currentHoldings into t5		
+sub $t5,$t5,$t1						#subtract t1 from t5, put in t5
+blez $t5,exitStrategy				#if our new total is <=0 then go to exitStrategy
+sw $t5, currentHoldings				#store t5 in currentHoldings
+li $v0,4							#print postGame text in t5
+la $a0,postGameText1
+syscall
+li $v0,4
+la $a0,postGameText3
+syscall
+li $v0,1
+move $a0,$t5
+syscall
+j cleanUp							#jump to cleanUp
+
+###############################################################################
+##Function Name: cleanUp
+###############################################################################
+##Functional Description:
+#resets all our temporary registers at the end of our loop
+###############################################################################
+##Register usage:
+#t3, reset to 0
+#t4, reset to 0
+#t5, reset to 0
+#t6, reset to 0
+###############################################################################
+##Pseudocode:
+#load 0 into t3
+#load 0 into t4
+#load 0 into t5
+#load 0 into t6
+###############################################################################
+cleanUp:
+li $t3,0 		#Cleans up all our temporary registers so we don't get wins overflowing.
+li $t4,0
+li $t5,0
+li $t6,0
+j mainRoutine
+
+###############################################################################
+##Function Name:exitStrategy
+###############################################################################
+##Functional Description:
+#prints the 'bye' message and ends the program
+###############################################################################
+##Register usage:
+#no temporary register use
+###############################################################################
+##Pseudocode:
+#print bye message
+#end program
+###############################################################################
+exitStrategy:
+li $v0,4
+la $a0,bye
+syscall
+li $v0,10
+syscall
+
+###############################################################################
+##Function Name: rand
+###############################################################################
+##Functional Description:
+#Takes a seed we give it, randomizes the number and then masks it to give
+#a value 1 through 6 to represent a dice roll
+###############################################################################
+##Register usage:
+#t0, a temporary register uses in calculations
+#v0 holds the return value
+###############################################################################
+##Pseudocode:
+#fetch seed value into v0
+#rotates our value bitwise and 'randomizes' it
+#AND the result with 0xFFFF to get a value 1 through 6
+#save the result in v0 and return
+###############################################################################
+rand:
+lw $v0, seed
+sll $t0, $v0, 13
+xor $v0, $v0, $t0
+srl $t0, $v0, 17
+xor $v0, $v0, $t0
+sll $t0, $v0, 5
+xor $v0, $v0, $t0
+sw $v0, seed
+andi $v0, $v0, 0xFFFF
+li $t0, 6
+div $v0, $t0
+mfhi $v0
+add $v0, $v0, 1
+jr $ra

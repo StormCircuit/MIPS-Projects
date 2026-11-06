@@ -1,0 +1,119 @@
+/
+//	Description:
+//	This project is meant to show the use of random number generation as well as more advanced uses of user input.
+//
+import java.util.Scanner;
+import java.util.Random;
+
+public class GuessingGame
+
+{
+	
+	public static void main(String[] args) {
+		
+		
+		
+		//Creating the scanner with keyboard input
+		Scanner keyboard = new Scanner(System.in);
+		
+		
+		//Variable declaration
+		//Put extra variables here
+		int guess, guesscounter;
+		Random generator = new Random();
+		
+		
+		//Generation of random number occurs
+		int answer = generator.nextInt(100-1) + 1;
+		
+		//Setting guesscounter to 0 in preparation for the game.
+		//When the game runs, it will add 1 to guesscounter, making it 1 guess(es) on the users first try.
+		guesscounter = 0;
+		
+		
+
+		
+		
+		
+		//MAKE SURE TO COMMENT OUT BEFORE SUBMITTING OR YOU WILL FAIL.
+		//Simply exists to verify that the answer that is generated is, in fact, valid to our conditions
+		//Un-comment to see answer before guessing. FOR TESTING ONLY!!
+		
+		System.out.print("Your answer is: " + answer + ".\n");
+		
+		//MAKE SURE TO COMMENT OUT BEFORE SUBMITTING OR YOU WILL FAIL.
+		
+		
+		
+		
+		
+		
+		
+		
+		//User facing text begins.
+		System.out.print("Number Guessing Game 2018tm\n");
+		System.out.print("A secret number between 1-100 has been generated.\n");
+		
+		
+		//Let the game begin!
+		//do-while loop that ensures that the game runs once.
+		//I know we didn't do this sort of loop in class but I wanted to try something new.
+		
+		do {
+			
+			//guesscounter runs when the loop is repeared/done once.
+			guesscounter = guesscounter + 1;
+			
+			
+			
+			System.out.print("Enter your guess? ");
+			guess = keyboard.nextInt();
+			
+			
+			
+			
+			//elseif conditions to sort through the user input and compare to the answer
+			//set it up so loop breaking conditions always run first so no extra text appears.
+			
+			if(guess == 0){
+				System.out.print("\n");
+			}
+			
+			else if(guess == answer){
+				System.out.print("\n");
+			}
+			
+			else if(guess > answer){
+				System.out.print("Guess is high, try again.\n");
+			}
+			
+			else if(guess < answer){
+				System.out.print("Guess is low, try again.\n");
+			}
+			else{
+			}
+			
+			
+			
+			
+		} while ((guess != answer) && (guess != 0));
+		
+		
+		
+		
+		
+		
+		
+		//Win message
+		if(guess == answer){
+		System.out.print("Correct in " + guesscounter + " guess(es).\n");
+		}
+		
+		
+		//Quit message
+		else if(guess == 0){
+		System.out.print("The secret number is " + answer + ".\n");
+		}
+		
+	}
+}

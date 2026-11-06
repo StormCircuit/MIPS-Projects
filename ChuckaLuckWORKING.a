@@ -1,0 +1,147 @@
+.data
+#all our stored data for use throughout the game.
+welcome: .asciiz"\nWelcome to ChuckaLuck!"
+welcome2: .asciiz"\nPlease input wager: "
+welcome3: .asciiz"\nYou can't bet more than you own! Try again or bet 0 to exit.\n"
+askForBet: .asciiz"Please bet a number 1 through 6: "
+
+currentRoll: .asciiz"\nRolled: "
+
+bye: .asciiz"\nThank you for playing! Goodbye."
+
+postGameText1: .asciiz"\nYou lost your bet!"
+postGameText2: .asciiz"\nYour winnings are: $"
+postGameText3: .asciiz"\nYou currently have: $"
+
+currentHoldings: .word 500
+loopCounterDefault: .word 3
+seed: .word 701438590
+
+#We will use registers R8-R15 AKA t0-t7 for our function
+#t0 is for our random functiom
+#t1 is for our wager
+#t2 is for our bet
+#t3 is for counting wins
+#t4 is for function temporary use
+#t5 is for function temporary use
+#t6 is for counting the loop
+
+
+
+.text
+li $v0,4
+la $a0,welcome
+syscall
+
+mainRoutine:
+li $v0,4
+la $a0,welcome2
+syscall
+li $v0,5
+syscall						#Get wager from user
+blez $v0,exitStrategy		#Checks if wager is 0, goes to exitStrategy subroutine if so.
+lw $t4, currentHoldings
+bgt $v0,$t4,impossibleBet	#Checks if wager is more than player owns, if so then go to impossibleBet
+move $t1,$v0
+li $v0, 4
+la $a0,askForBet
+syscall
+li $v0,5
+syscall
+move $t2,$v0
+lw $t4,loopCounterDefault
+j DiceRolling
+impossibleBet:
+li $v0,4
+la $a0,welcome3
+syscall
+j mainRoutine
+
+DiceRolling:
+beq $t6, $t4, postGame
+jal rand
+addi $t6,$t6,1				#Tick our loop counter +1
+move $t5,$v0     			#move rand output to temp register
+li $v0,4         			#print the roll to the player here till 2nd syscall
+la $a0, currentRoll
+syscall
+li $v0,1
+move $a0,$t5
+syscall
+beq $t5, $t2, win 			#if equal to our bet, jump to adding a point to our counter, else we simply loop back
+j DiceRolling
+win:
+addi $t3, $t3, 1
+j DiceRolling
+
+
+
+
+
+postGame:
+beq $t3,$0,loseBet
+mul $t5,$t1,$t3
+lw $t4, currentHoldings
+add $t4,$t4,$t5
+sw $t4, currentHoldings
+li $v0,4
+la $a0,postGameText2
+syscall
+li $v0,1
+move $a0,$t5
+syscall
+li $v0,4
+la $a0,postGameText3
+syscall
+li $v0,1
+move $a0,$t4
+syscall
+j cleanUp
+
+
+loseBet:
+lw $t5,currentHoldings
+sub $t5,$t5,$t1
+beqz $t5,exitStrategy
+sw $t5, currentHoldings
+li $v0,4
+la $a0,postGameText1
+syscall
+li $v0,4
+la $a0,postGameText3
+syscall
+li $v0,1
+move $a0,$t5
+syscall
+blez $t5,exitStrategy
+j cleanUp
+
+cleanUp:
+li $t3,0 		#Cleans up all our temporary registers so we don't get wins overflowing.
+li $t4,0
+li $t5,0
+li $t6,0
+j mainRoutine
+
+exitStrategy:
+li $v0,4
+la $a0,bye
+syscall
+li $v0,10
+syscall
+
+rand:
+lw $v0, seed
+sll $t0, $v0, 13
+xor $v0, $v0, $t0
+srl $t0, $v0, 17
+xor $v0, $v0, $t0
+sll $t0, $v0, 5
+xor $v0, $v0, $t0
+sw $v0, seed
+andi $v0, $v0, 0xFFFF
+li $t0, 6
+div $v0, $t0
+mfhi $v0
+add $v0, $v0, 1
+jr $ra

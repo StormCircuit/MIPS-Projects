@@ -1,0 +1,7 @@
+Trying to fix the initBoard not putting 5 in the right edge in the second to last row.
+Let your size be 5, then if you look at address location 100100d4 in the data segment you can count 7 5's, enough for the last row. There should be 8 5's from the 2 5's being back to back at the end of a row.
+THIS MAY BE AN ISSUE WITH THE BOTTOM ROW NOT PUTTING ENOUGH 5's AS WELL!
+
+Still can not get pickExit to put a 1 in the bottom row. Choosing a larger maze puts 1 outside the maze as well???
+
+pickExit is looking at the wrong addresses. I double checked them and utilized a variable width and height to preserve my original width and height but still I cant get it to calculate the right address. 
